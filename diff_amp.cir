@@ -1,0 +1,74 @@
+* CMOS Differential Amplifier - Initial Design
+* Supply voltage: 1.8 V
+
+.param VDDVAL=1.8
+.param WN=10u
+.param WP=20u
+.param LCH=0.18u
+.param IBIAS=100u
+
+* Power supply
+VDD vdd 0 {VDDVAL}
+
+* Differential input
+VINP inp 0 DC 0.9 AC 0.5
+VINN inn 0 DC 0.9 AC -0.5
+
+* NMOS differential pair
+M1 n1 inp tail 0 NMOS W={WN} L={LCH}
+M2 out inn tail 0 NMOS W={WN} L={LCH}
+
+* PMOS current mirror active load
+M3 n1 n1 vdd vdd PMOS W={WP} L={LCH}
+M4 out n1 vdd vdd PMOS W={WP} L={LCH}
+
+* Tail current source
+ITAIL tail 0 DC {IBIAS}
+
+* Output capacitance
+CLOAD out 0 20f
+
+* Simplified MOS models for initial learning
+.model NMOS NMOS (LEVEL=1 VTO=0.45 KP=200u LAMBDA=0.05)
+.model PMOS PMOS (LEVEL=1 VTO=-0.45 KP=100u LAMBDA=0.05)
+
+.control
+
+* Calculate DC operating point
+op
+print v(inp) v(inn) v(tail) v(n1) v(out)
+print @m1[vgs] @m1[vds]
+print @m2[vgs] @m2[vds]
+print @m3[vgs] @m3[vds]
+print @m4[vgs] @m4[vds]
+
+* Measure DC power consumption
+let power = -i(vdd)*v(vdd)
+print power
+
+* Run frequency sweep
+ac dec 100 1k 10G
+
+* Calculate differential voltage gain
+let gain = v(out)/(v(inp)-v(inn))
+let gain_db = db(gain)
+
+* Measure gain at 1 kHz
+meas ac low_freq_gain FIND gain_db AT=1k
+
+* Calculate the -3 dB threshold for this bias current
+let cutoff_db = low_freq_gain - 3.01029995664
+
+* Create a zero-crossing vector
+let gain_relative = gain_db - cutoff_db
+
+* Find where gain drops through the -3 dB threshold
+meas ac bandwidth WHEN gain_relative=0 FALL=1
+
+* Export frequency response
+set wr_singlescale
+wrdata results/gain_response.txt gain_db
+
+
+quit
+.endc

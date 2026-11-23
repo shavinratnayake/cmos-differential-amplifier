@@ -1,0 +1,13 @@
+# NGspice logs
+*.log
+
+# Generated bias-sweep netlists
+results/bias_*uA.cir
+
+# Python cache
+__pycache__/
+*.pyc
+
+# Editor backup files
+*~
+*.swp
